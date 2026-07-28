@@ -3,20 +3,26 @@ package com.roshan.minispring.beans;
 import com.roshan.minispring.exception.MiniSpringException;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 public class BeanFactory {
 
     private final Map<Class<?>, BeanDefinition> beanDefinitions = new HashMap<>();
     private final Map<Class<?>, Object> beans = new HashMap<>();
+    private final Set<Class<?>> beansInCreation = new HashSet<>();
 
-    private Object createBean( BeanDefinition beanDefinition){
+    private void createBean(BeanDefinition beanDefinition){
         Class<?> clazz = beanDefinition.getBeanClass();
 
         if (this.beans.containsKey(clazz)){
-            return this.beans.get(clazz);
+            return;
         }
+
+        if (beansInCreation.contains(clazz)){
+            throw new MiniSpringException("Circular dependency detected for class: " + clazz.getName());
+        }
+
+        this.beansInCreation.add(clazz);
 
         List<Class<?>> dependencies = beanDefinition.getDependencies();
 
@@ -40,11 +46,11 @@ public class BeanFactory {
             createdBean = constructor.newInstance(dependencyObjects.toArray());
         } catch (Exception e){
             throw new MiniSpringException("Cannot construct " + clazz.getName(),e);
+        }finally {
+            this.beansInCreation.remove(clazz);
         }
 
         this.beans.put(clazz, createdBean);
-
-        return createdBean;
 
     }
 
