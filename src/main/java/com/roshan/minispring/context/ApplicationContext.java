@@ -3,6 +3,7 @@ package com.roshan.minispring.context;
 import com.roshan.minispring.beans.BeanDefinition;
 import com.roshan.minispring.beans.BeanDefinitionGenerator;
 import com.roshan.minispring.beans.BeanFactory;
+import com.roshan.minispring.beans.BeanRegistry;
 import com.roshan.minispring.exception.MiniSpringException;
 import com.roshan.minispring.scanner.ClassPathScanner;
 
@@ -19,10 +20,10 @@ public class ApplicationContext {
         List<Class<?>> classes = scanner.scan(basePackage);
 
         BeanDefinitionGenerator beanDefinitionGenerator = new BeanDefinitionGenerator();
-        List<BeanDefinition> beanDefinitions = beanDefinitionGenerator.generateBeanDefinitions(classes);
+        BeanRegistry beanRegistry = beanDefinitionGenerator.generateBeanDefinitions(classes);
 
-        BeanFactory beanFactory  = new BeanFactory();
-        beans = beanFactory.createBeans(beanDefinitions);
+        BeanFactory beanFactory  = new BeanFactory(beanRegistry);
+        beans = beanFactory.createBeans();
 
     }
 

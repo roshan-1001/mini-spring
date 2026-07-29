@@ -1,7 +1,6 @@
 package com.roshan.demo;
 
 import com.roshan.demo.service.OrderService;
-import com.roshan.demo.service.PaymentService;
 import com.roshan.minispring.context.ApplicationContext;
 
 public class Main {
@@ -10,10 +9,9 @@ public class Main {
 
         ApplicationContext context = new ApplicationContext("com.roshan.demo");
 
-        PaymentService paymentService = context.getBean(PaymentService.class);
         OrderService orderService = context.getBean(OrderService.class);
+        orderService.placeOrder();
 
-        System.out.println(paymentService);
         System.out.println(orderService);
     }
 }

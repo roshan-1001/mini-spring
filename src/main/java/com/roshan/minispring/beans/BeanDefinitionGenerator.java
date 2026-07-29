@@ -1,17 +1,22 @@
 package com.roshan.minispring.beans;
 
+import com.roshan.minispring.annotations.Primary;
 import com.roshan.minispring.annotations.Service;
 import com.roshan.minispring.exception.MiniSpringException;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 
 public class BeanDefinitionGenerator {
 
-    public List<BeanDefinition> generateBeanDefinitions(List<Class<?>> classes) {
+    public BeanRegistry generateBeanDefinitions(List<Class<?>> classes) {
 
         List<BeanDefinition> beanDefs = new ArrayList<>();
+        Map<Class<?>, List<BeanDefinition>> interfaceMappings = new HashMap<>();
 
         for (Class<?> clazz : classes){
             Constructor<?>[] constructors;
@@ -28,13 +33,24 @@ public class BeanDefinitionGenerator {
 
                 dependencies = List.of(constructor.getParameterTypes());
 
-                BeanDefinition beanDef = new BeanDefinition(clazz, constructor, dependencies);
+                boolean isPrimary = (clazz.isAnnotationPresent(Primary.class));
+
+                BeanDefinition beanDef = new BeanDefinition(clazz, constructor, dependencies, isPrimary);
+
 
                 beanDefs.add(beanDef);
+
+                Class<?>[] interfaces = clazz.getInterfaces();
+
+                for (Class<?> currInterface : interfaces){
+                    interfaceMappings
+                            .computeIfAbsent(currInterface, k -> new ArrayList<>())
+                            .add(beanDef);
+                }
             }
 
         }
 
-        return beanDefs;
+        return new BeanRegistry(beanDefs, interfaceMappings);
     }
 }
