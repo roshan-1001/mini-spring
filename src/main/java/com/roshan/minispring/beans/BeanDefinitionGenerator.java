@@ -1,10 +1,12 @@
 package com.roshan.minispring.beans;
 
 import com.roshan.minispring.annotations.Primary;
+import com.roshan.minispring.annotations.Qualifier;
 import com.roshan.minispring.annotations.Service;
 import com.roshan.minispring.exception.MiniSpringException;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,9 +20,12 @@ public class BeanDefinitionGenerator {
         List<BeanDefinition> beanDefs = new ArrayList<>();
         Map<Class<?>, List<BeanDefinition>> interfaceMappings = new HashMap<>();
 
+        return createBeanRegistry(classes, beanDefs, interfaceMappings);
+    }
+
+    private BeanRegistry createBeanRegistry(List<Class<?>> classes, List<BeanDefinition> beanDefs, Map<Class<?>, List<BeanDefinition>> interfaceMappings){
         for (Class<?> clazz : classes){
             Constructor<?>[] constructors;
-            List<Class<?>> dependencies;
             if (clazz.isAnnotationPresent(Service.class)){
 
                 constructors = clazz.getDeclaredConstructors();
@@ -28,15 +33,25 @@ public class BeanDefinitionGenerator {
                     throw new MiniSpringException(clazz.getName()+"has multiple constructors, MiniSpring currently supports exactly one.");
                 }
 
-                Constructor<?> constructor;
-                constructor = constructors[0];
+                Constructor<?> constructor = constructors[0];
 
-                dependencies = List.of(constructor.getParameterTypes());
+                Parameter[] parameters = constructor.getParameters();
+
+                List<ConstructorDependency> dependencies = new ArrayList<>();
+                for(Parameter parameter : parameters){
+                    if(parameter.isAnnotationPresent(Qualifier.class)) {
+                        Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
+                        dependencies.add(new ConstructorDependency(parameter.getType(), qualifier.value()));
+                    }else{
+                        dependencies.add((new ConstructorDependency(parameter.getType())));
+                    }
+                }
 
                 boolean isPrimary = (clazz.isAnnotationPresent(Primary.class));
 
-                BeanDefinition beanDef = new BeanDefinition(clazz, constructor, dependencies, isPrimary);
-
+                String simpleName = clazz.getSimpleName();
+                String beanName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+                BeanDefinition beanDef = new BeanDefinition(clazz, constructor, dependencies, isPrimary, beanName);
 
                 beanDefs.add(beanDef);
 

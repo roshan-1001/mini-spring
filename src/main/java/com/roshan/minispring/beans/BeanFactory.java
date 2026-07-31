@@ -42,34 +42,14 @@ public class BeanFactory {
 
         this.beansInCreation.add(clazz);
 
-        List<Class<?>> dependencies = beanDefinition.getDependencies();
+        List<ConstructorDependency> constructorDependencies = beanDefinition.getDependencies();
+
         List<BeanDefinition> resolvedDependencies = new ArrayList<>();
 
-        for(Class<?> dependency: dependencies){
-            BeanDefinition bd = beanDefinitions.get(dependency);
+        for(ConstructorDependency dependency: constructorDependencies){
+            BeanDefinition bd = beanDefinitions.get(dependency.getType());
             if(bd==null){
-                if(!interfaceMappings.containsKey(dependency)){
-                    throw new MiniSpringException("Dependency " + dependency.getName() + "not found for " + clazz.getName());
-                }
-                else if(interfaceMappings.get(dependency).size()==1){
-                    bd = interfaceMappings.get(dependency).getFirst();
-                }
-                else if(interfaceMappings.get(dependency).size()>1) {
-                    List<BeanDefinition> implementations = interfaceMappings.get(dependency);
-                    int primaryCount = 0;
-                    for (BeanDefinition beanDef : implementations) {
-                        if (beanDef.isPrimary()) {
-                            bd = beanDef;
-                            primaryCount++;
-                        }
-                        if (primaryCount>1){
-                            throw new MiniSpringException("Interface " + dependency.getName() + " has more than one 'Primary' implementations");
-                        }
-                    }
-                }
-                if (bd == null){
-                    throw new MiniSpringException("Could not find primary implementation for interface: " + dependency.getName());
-                }
+                bd = resolveBeanDefinition(dependency, clazz);
             }
             createBean(bd);
             resolvedDependencies.add(bd);
@@ -93,6 +73,52 @@ public class BeanFactory {
 
         this.beans.put(clazz, createdBean);
 
+    }
+
+    private BeanDefinition resolveBeanDefinition(ConstructorDependency dependency, Class<?> clazz){
+
+        BeanDefinition bd = null;
+        if(!interfaceMappings.containsKey(dependency.getType())){
+            throw new MiniSpringException("Dependency " + dependency.getType().getName() + "not found for " + clazz.getName());
+        }
+        else if(interfaceMappings.get(dependency.getType()).size()==1){
+            bd = interfaceMappings.get(dependency.getType()).getFirst();
+        }
+        else if(interfaceMappings.get(dependency.getType()).size()>1) {
+
+            List<BeanDefinition> implementations = interfaceMappings.get(dependency.getType());
+
+
+            if(dependency.getQualifier() != null){
+
+                for(BeanDefinition implementation: implementations){
+                    if(implementation.getBeanName().equals(dependency.getQualifier())){
+                        bd = implementation;
+                    }
+                }
+                if(bd == null) {
+                    throw new MiniSpringException("The qualifier: " + dependency.getQualifier() + "does not exist");
+                }
+                return bd;
+
+            }
+
+            int primaryCount = 0;
+            for (BeanDefinition beanDef : implementations) {
+                if (beanDef.isPrimary()) {
+                    bd = beanDef;
+                    primaryCount++;
+                }
+                if (primaryCount > 1) {
+                    throw new MiniSpringException("Interface " + dependency.getType().getName() + " has more than one 'Primary' implementations");
+                }
+            }
+
+        }
+        if (bd == null){
+            throw new MiniSpringException("Could not find qualifier or a primary implementation for interface: " + dependency.getType().getName());
+        }
+        return bd;
     }
 
 

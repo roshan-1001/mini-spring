@@ -2,6 +2,7 @@ package com.roshan.demo.service;
 
 
 import com.roshan.demo.payment.PaymentProcessor;
+import com.roshan.minispring.annotations.Qualifier;
 import com.roshan.minispring.annotations.Service;
 
 @Service
@@ -9,7 +10,7 @@ public class PaymentService {
 
     private final PaymentProcessor paymentProcessor;
 
-    public PaymentService(PaymentProcessor paymentProcessor){
+    public PaymentService( PaymentProcessor paymentProcessor){
 
         this.paymentProcessor = paymentProcessor;
         System.out.println("PaymentService created");

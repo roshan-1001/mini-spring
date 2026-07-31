@@ -7,15 +7,16 @@ public class BeanDefinition {
 
     private final Class<?> beanClass;
     private final Constructor<?> constructor;
-    private final List<Class<?>> dependencies;
-
+    private final List<ConstructorDependency> dependencies;
     private final boolean primary;
+    private final String beanName;
 
-    public BeanDefinition (Class<?> beanClass, Constructor<?> constructor, List<Class<?>> dependencies, boolean isPrimary){
+    public BeanDefinition (Class<?> beanClass, Constructor<?> constructor, List<ConstructorDependency> dependencies, boolean isPrimary, String beanName){
         this.beanClass = beanClass;
         this.constructor = constructor;
         this.dependencies = dependencies;
         this.primary = isPrimary;
+        this.beanName = beanName;
     }
 
     public Class<?> getBeanClass(){
@@ -26,11 +27,13 @@ public class BeanDefinition {
         return constructor;
     }
 
-    public List<Class<?>> getDependencies(){
+    public List<ConstructorDependency> getDependencies(){
         return dependencies;
     }
 
     public boolean isPrimary(){
         return primary;
     }
+
+    public String getBeanName(){ return this.beanName;}
 }
