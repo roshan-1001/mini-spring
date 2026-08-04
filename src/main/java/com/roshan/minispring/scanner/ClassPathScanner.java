@@ -19,7 +19,7 @@ public class ClassPathScanner {
 
         URL resource = classLoader.getResource(packagePath);
 
-        System.out.println(resource);
+        //System.out.println(resource);
 
         List<Class<?>> classes =  new ArrayList<>() ;
 

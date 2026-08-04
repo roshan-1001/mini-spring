@@ -1,5 +1,6 @@
 package com.roshan.minispring.beans;
 
+import com.roshan.minispring.enums.BeanScope;
 import com.roshan.minispring.exception.MiniSpringException;
 
 import java.lang.reflect.Constructor;
@@ -19,49 +20,68 @@ public class BeanFactory {
             this.beanDefinitions.put(bd.getBeanClass(),bd);
         }
         this.interfaceMappings.putAll(beanRegistry.getInterfaceMappings());
+        createBeans();
     }
 
-    public Map<Class<?>, Object> createBeans(){
+    public void createBeans(){
 
         for (BeanDefinition bd : this.beanDefinitions.values()){
+            if(bd.getScope() == BeanScope.PROTOTYPE){
+                continue;
+            }
             createBean(bd);
         }
-        return this.beans;
+
     }
 
-    private void createBean(BeanDefinition beanDefinition){
-        Class<?> clazz = beanDefinition.getBeanClass();
+    public <T> T getBean(Class<T> clazz){
 
-        if (this.beans.containsKey(clazz)){
-            return;
+        BeanDefinition bd = beanDefinitions.get(clazz);
+
+        if(bd == null){
+            throw new MiniSpringException("No bean registered for type: " +  clazz.getName());
         }
 
+        if(bd.getScope() == BeanScope.SINGLETON){
+            return clazz.cast(beans.get(clazz));
+        }
+        else if(bd.getScope() == BeanScope.PROTOTYPE){
+            return clazz.cast(createBean(bd));
+        }
+        else{
+            throw new MiniSpringException("Working with only 2 scopes for now");
+        }
+    }
+
+    private Object createBean(BeanDefinition beanDefinition){
+
+        Class<?> clazz = beanDefinition.getBeanClass();
+
+        //check singleton cache
+        if (beanDefinition.getScope() == BeanScope.SINGLETON && this.beans.containsKey(clazz)){
+            return this.beans.get(clazz);
+        }
+
+        //detect circular dependency
         if (beansInCreation.contains(clazz)){
             throw new MiniSpringException("Circular dependency detected for class: " + clazz.getName());
         }
 
+        //add the current being that is processed to beansInCreation
         this.beansInCreation.add(clazz);
 
         List<ConstructorDependency> constructorDependencies = beanDefinition.getDependencies();
-
-        List<BeanDefinition> resolvedDependencies = new ArrayList<>();
+        List<Object> dependencyObjects = new ArrayList<>();
 
         for(ConstructorDependency dependency: constructorDependencies){
             BeanDefinition bd = beanDefinitions.get(dependency.getType());
             if(bd==null){
-                bd = resolveBeanDefinition(dependency, clazz);
+                bd = resolveDependency(dependency, clazz);
             }
-            createBean(bd);
-            resolvedDependencies.add(bd);
+            dependencyObjects.add(createBean(bd));
         }
 
         Constructor<?> constructor = beanDefinition.getConstructor();
-
-        List<Object> dependencyObjects = new ArrayList<>();
-        for(BeanDefinition bd: resolvedDependencies){
-            dependencyObjects.add(beans.get(bd.getBeanClass()));
-        }
-
         Object createdBean;
         try {
             createdBean = constructor.newInstance(dependencyObjects.toArray());
@@ -71,13 +91,17 @@ public class BeanFactory {
             this.beansInCreation.remove(clazz);
         }
 
-        this.beans.put(clazz, createdBean);
+        if(beanDefinition.getScope() == BeanScope.SINGLETON) {
+            this.beans.put(clazz, createdBean);
+        }
+        return createdBean;
 
     }
 
-    private BeanDefinition resolveBeanDefinition(ConstructorDependency dependency, Class<?> clazz){
+    private BeanDefinition resolveDependency(ConstructorDependency dependency, Class<?> clazz){
 
         BeanDefinition bd = null;
+
         if(!interfaceMappings.containsKey(dependency.getType())){
             throw new MiniSpringException("Dependency " + dependency.getType().getName() + "not found for " + clazz.getName());
         }
